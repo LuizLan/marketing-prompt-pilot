@@ -121,6 +121,7 @@ Por favor, gere um prompt completo, detalhado e versátil que inclua todos os el
     });
 
     if (!response.ok) {
+      console.error("Ocorreu um erro inesperado ao processar a requisição:", response);
       throw new Error(`Erro da API OpenAI: ${response.status}`);
     }
 
