@@ -54,7 +54,7 @@ const PromptGenerator: React.FC<PromptGeneratorProps> = ({
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer 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`,
+        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
