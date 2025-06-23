@@ -88,7 +88,7 @@ const PromptGenerator: React.FC<PromptGeneratorProps> = ({
     const commonWords = ['o', 'a', 'de', 'da', 'do', 'que', 'e', 'para', 'com', 'em', 'um', 'uma', 'é', 'são', 'ter', 'como', 'mais', 'seu', 'sua'];
     const words = text.toLowerCase().match(/\b\w+\b/g) || [];
     const filtered = words.filter(word => word.length > 3 && !commonWords.includes(word));
-    const frequency = {};
+    const frequency: { [key: string]: number } = {};
     
     filtered.forEach(word => {
       frequency[word] = (frequency[word] || 0) + 1;
