@@ -40,26 +40,129 @@ const PromptGenerator: React.FC<PromptGeneratorProps> = ({
   };
 
   const analyzeBriefing = (text: string) => {
-    // Análise simulada do briefing
     const words = text.toLowerCase();
     
-    // Detectar público-alvo
-    let targetAudience = "Público geral";
-    if (words.includes("jovens") || words.includes("millennials")) targetAudience = "Jovens adultos (25-35 anos)";
-    if (words.includes("profissionais") || words.includes("executivos")) targetAudience = "Profissionais";
-    if (words.includes("família") || words.includes("pais")) targetAudience = "Famílias";
-    if (words.includes("idosos") || words.includes("terceira idade")) targetAudience = "Terceira idade";
+    // FOCO PRINCIPAL: Identificar e compreender o produto
+    const productInfo = analyzeProduct(text, words);
     
-    // Detectar produto/serviço
-    let productType = "Produto/Serviço";
-    if (words.includes("app") || words.includes("aplicativo")) productType = "Aplicativo";
-    if (words.includes("curso") || words.includes("educação")) productType = "Educacional";
-    if (words.includes("alimento") || words.includes("comida")) productType = "Alimentício";
-    if (words.includes("beleza") || words.includes("cosmético")) productType = "Beleza/Cosmético";
-    if (words.includes("tecnologia") || words.includes("tech")) productType = "Tecnologia";
+    // Detectar público-alvo com base no produto identificado
+    let targetAudience = determineTargetAudience(words, productInfo);
     
-    // Detectar emoções/gatilhos
+    // Detectar emoções/gatilhos baseados no tipo de produto
+    const emotions = detectEmotions(words, productInfo);
+    
+    // Detectar objetivo da campanha
+    let goal = detectCampaignGoal(words);
+    
+    return {
+      // Produto é agora o elemento central da análise
+      product: productInfo,
+      targetAudience,
+      emotions: emotions.length > 0 ? emotions : ["Positividade"],
+      goal,
+      briefingLength: text.length,
+      keyTerms: extractKeyTerms(text)
+    };
+  };
+
+  const analyzeProduct = (originalText: string, lowerText: string) => {
+    // Detectar categoria do produto
+    let category = "Produto/Serviço";
+    let subcategory = "";
+    let productName = "";
+    let features = [];
+    let benefits = [];
+
+    // Identificar categoria principal
+    if (lowerText.includes("app") || lowerText.includes("aplicativo") || lowerText.includes("software")) {
+      category = "Aplicativo/Software";
+      if (lowerText.includes("meditação") || lowerText.includes("mindfulness")) subcategory = "Bem-estar";
+      if (lowerText.includes("produtividade") || lowerText.includes("organização")) subcategory = "Produtividade";
+      if (lowerText.includes("fitness") || lowerText.includes("exercício")) subcategory = "Fitness";
+      if (lowerText.includes("educação") || lowerText.includes("aprendizado")) subcategory = "Educacional";
+    } else if (lowerText.includes("curso") || lowerText.includes("educação") || lowerText.includes("treinamento")) {
+      category = "Educacional";
+      if (lowerText.includes("online")) subcategory = "Online";
+      if (lowerText.includes("profissional")) subcategory = "Profissionalizante";
+    } else if (lowerText.includes("alimento") || lowerText.includes("comida") || lowerText.includes("bebida")) {
+      category = "Alimentício";
+      if (lowerText.includes("natural") || lowerText.includes("orgânico")) subcategory = "Natural/Orgânico";
+      if (lowerText.includes("fitness") || lowerText.includes("proteína")) subcategory = "Fitness/Suplemento";
+    } else if (lowerText.includes("cosmético") || lowerText.includes("beleza") || lowerText.includes("skincare")) {
+      category = "Beleza/Cosmético";
+      if (lowerText.includes("natural")) subcategory = "Natural";
+      if (lowerText.includes("anti-idade")) subcategory = "Anti-idade";
+    } else if (lowerText.includes("roupa") || lowerText.includes("vestuário") || lowerText.includes("moda")) {
+      category = "Moda/Vestuário";
+    } else if (lowerText.includes("serviço") || lowerText.includes("consultoria")) {
+      category = "Serviço";
+    }
+
+    // Extrair nome do produto (buscar por palavras-chave que indicam nome)
+    const namePatterns = [
+      /(?:aplicativo|app|produto|marca)\s+([A-Z][a-zA-Z]+)/gi,
+      /([A-Z][a-zA-Z]+)(?:\s+é\s+um|\s+oferece|\s+proporciona)/gi
+    ];
+    
+    for (const pattern of namePatterns) {
+      const match = originalText.match(pattern);
+      if (match) {
+        productName = match[1] || "";
+        break;
+      }
+    }
+
+    // Extrair características/funcionalidades
+    if (lowerText.includes("sessões") || lowerText.includes("minutos")) features.push("Sessões personalizadas");
+    if (lowerText.includes("pausas") || lowerText.includes("trabalho")) features.push("Integração com rotina");
+    if (lowerText.includes("fácil") || lowerText.includes("simples")) features.push("Facilidade de uso");
+    if (lowerText.includes("rápido") || lowerText.includes("eficiente")) features.push("Resultados rápidos");
+
+    // Extrair benefícios
+    if (lowerText.includes("tranquilidade") || lowerText.includes("paz")) benefits.push("Promove tranquilidade");
+    if (lowerText.includes("reduz estresse") || lowerText.includes("ansiedade")) benefits.push("Reduz estresse");
+    if (lowerText.includes("melhora") || lowerText.includes("otimiza")) benefits.push("Melhora performance");
+    if (lowerText.includes("economiza tempo") || lowerText.includes("praticidade")) benefits.push("Economiza tempo");
+
+    return {
+      category,
+      subcategory,
+      name: productName,
+      features,
+      benefits,
+      description: extractProductDescription(originalText)
+    };
+  };
+
+  const extractProductDescription = (text: string) => {
+    // Extrair uma descrição concisa do produto
+    const sentences = text.split(/[.!?]+/).map(s => s.trim()).filter(s => s.length > 20);
+    return sentences[0] || "Produto inovador";
+  };
+
+  const determineTargetAudience = (words: string, productInfo: any) => {
+    // Determinar público com base no produto E no texto
+    if (productInfo.category === "Aplicativo/Software" && productInfo.subcategory === "Bem-estar") {
+      if (words.includes("profissionais") || words.includes("trabalho")) return "Jovens profissionais (25-35 anos)";
+    }
+    
+    if (words.includes("jovens") || words.includes("millennials")) return "Jovens adultos (25-35 anos)";
+    if (words.includes("profissionais") || words.includes("executivos")) return "Profissionais";
+    if (words.includes("família") || words.includes("pais")) return "Famílias";
+    if (words.includes("idosos") || words.includes("terceira idade")) return "Terceira idade";
+    
+    return "Público geral";
+  };
+
+  const detectEmotions = (words: string, productInfo: any) => {
     const emotions = [];
+    
+    // Emoções baseadas no tipo de produto
+    if (productInfo.category === "Aplicativo/Software" && productInfo.subcategory === "Bem-estar") {
+      emotions.push("Tranquilidade", "Equilíbrio");
+    }
+    
+    // Emoções do texto
     if (words.includes("tranquilidade") || words.includes("paz") || words.includes("relaxar")) emotions.push("Tranquilidade");
     if (words.includes("energia") || words.includes("motivação")) emotions.push("Energia");
     if (words.includes("confiança") || words.includes("segurança")) emotions.push("Confiança");
@@ -67,21 +170,15 @@ const PromptGenerator: React.FC<PromptGeneratorProps> = ({
     if (words.includes("praticidade") || words.includes("facilidade")) emotions.push("Praticidade");
     if (words.includes("exclusividade") || words.includes("premium")) emotions.push("Exclusividade");
     
-    // Detectar objetivo
-    let goal = "Awareness";
-    if (words.includes("venda") || words.includes("compra")) goal = "Conversão";
-    if (words.includes("engajamento") || words.includes("interação")) goal = "Engajamento";
-    if (words.includes("lançamento") || words.includes("novidade")) goal = "Lançamento";
-    if (words.includes("branding") || words.includes("marca")) goal = "Branding";
-    
-    return {
-      targetAudience,
-      productType,
-      emotions: emotions.length > 0 ? emotions : ["Positividade"],
-      goal,
-      briefingLength: text.length,
-      keyTerms: extractKeyTerms(text)
-    };
+    return [...new Set(emotions)]; // Remove duplicatas
+  };
+
+  const detectCampaignGoal = (words: string) => {
+    if (words.includes("lançamento") || words.includes("novidade")) return "Lançamento";
+    if (words.includes("venda") || words.includes("compra") || words.includes("conversão")) return "Conversão";
+    if (words.includes("engajamento") || words.includes("interação")) return "Engajamento";
+    if (words.includes("branding") || words.includes("marca")) return "Branding";
+    return "Awareness";
   };
 
   const extractKeyTerms = (text: string) => {
@@ -101,55 +198,77 @@ const PromptGenerator: React.FC<PromptGeneratorProps> = ({
   };
 
   const createOptimizedPrompt = (analysis: any) => {
+    const { product } = analysis;
+    
+    // Criar prompt focado no produto identificado
+    let productFocus = "";
+    if (product.name) {
+      productFocus = `featuring ${product.name}, `;
+    }
+    
+    const productDescription = product.description || `${product.category.toLowerCase()} solution`;
+    const productBenefits = product.benefits.length > 0 ? product.benefits.join(", ").toLowerCase() : "enhanced user experience";
+    
+    // Estilo visual baseado na categoria do produto
     const styleMap = {
-      "Aplicativo": "modern, clean UI/UX design, mobile-first",
-      "Educacional": "professional, trustworthy, inspiring",
-      "Alimentício": "appetizing, natural, fresh",
-      "Beleza/Cosmético": "elegant, sophisticated, aspirational",
-      "Tecnologia": "innovative, cutting-edge, futuristic"
+      "Aplicativo/Software": "modern, clean UI/UX aesthetic, tech-forward design",
+      "Educacional": "professional, trustworthy, inspiring and accessible",
+      "Alimentício": "fresh, appetizing, natural and vibrant",
+      "Beleza/Cosmético": "elegant, sophisticated, aspirational beauty",
+      "Moda/Vestuário": "stylish, trendy, fashion-forward",
+      "Serviço": "professional, reliable, premium service quality"
     };
 
     const emotionMap = {
       "Tranquilidade": "calm, peaceful, serene atmosphere",
-      "Energia": "dynamic, vibrant, energetic",
-      "Confiança": "professional, reliable, trustworthy",
-      "Felicidade": "joyful, bright, positive",
-      "Praticidade": "simple, efficient, user-friendly",
-      "Exclusividade": "premium, luxury, sophisticated"
+      "Energia": "dynamic, vibrant, energetic mood",
+      "Confiança": "professional, reliable, trustworthy feel",
+      "Felicidade": "joyful, bright, positive energy",
+      "Praticidade": "simple, efficient, user-friendly approach",
+      "Exclusividade": "premium, luxury, sophisticated elegance"
     };
 
     const audienceMap = {
-      "Jovens adultos (25-35 anos)": "young professionals, modern lifestyle",
-      "Profissionais": "business environment, corporate setting",
-      "Famílias": "family-oriented, warm, inclusive",
-      "Terceira idade": "mature, respectful, accessible"
+      "Jovens profissionais (25-35 anos)": "young professionals in modern work environment",
+      "Profissionais": "business professionals, corporate setting",
+      "Famílias": "family-oriented, warm and inclusive atmosphere",
+      "Terceira idade": "mature audience, respectful and accessible"
     };
 
-    const style = styleMap[analysis.productType] || "clean, professional";
-    const emotion = analysis.emotions.map(e => emotionMap[e]).join(", ") || "positive, engaging";
-    const audience = audienceMap[analysis.targetAudience] || "diverse audience";
+    const style = styleMap[product.category] || "clean, professional design";
+    const emotion = analysis.emotions.map(e => emotionMap[e]).join(", ") || "positive, engaging atmosphere";
+    const audience = audienceMap[analysis.targetAudience] || "diverse target audience";
 
-    return `Create a high-quality marketing image that showcases ${analysis.productType.toLowerCase()}. 
+    return `Create a high-quality marketing image ${productFocus}showcasing ${productDescription}.
+
+PRODUTO PRINCIPAL: ${product.category}${product.subcategory ? ` - ${product.subcategory}` : ''}
+${product.features.length > 0 ? `CARACTERÍSTICAS: ${product.features.join(", ")}` : ''}
+BENEFÍCIOS: ${productBenefits}
 
 TARGET AUDIENCE: ${audience}
-EMOTIONAL DIRECTION: ${emotion}
-VISUAL STYLE: ${style}
+OBJETIVO DA CAMPANHA: ${analysis.goal}
 
-COMPOSITION:
-- Clean, modern composition with strong visual hierarchy
-- Use warm, inviting colors that convey ${analysis.emotions.join(" and ").toLowerCase()}
-- Include subtle branding elements without overwhelming the message
-- Ensure the image works across digital platforms (social media, web, mobile)
+DIREÇÃO VISUAL:
+- ${style}
+- ${emotion}
+- Highlight the product's core value proposition: ${productBenefits}
+- Showcase ${product.category.toLowerCase()} in action or context of use
+- Professional photography/illustration style that conveys ${analysis.emotions.join(" and ").toLowerCase()}
 
-TECHNICAL SPECS:
-- High resolution, professional photography or illustration style
-- Balanced lighting with soft shadows
-- Sharp focus on key product/service elements
-- Leave space for text overlay if needed
+COMPOSIÇÃO:
+- Clean, modern layout with strong focus on the product
+- Use colors and lighting that reinforce ${analysis.emotions.join(", ").toLowerCase()}
+- Include visual elements that communicate ${product.benefits.join(" and ").toLowerCase()}
+- Ensure the image works across digital marketing platforms
+- Leave strategic space for product name and key messaging
 
-MOOD: ${emotion}, appealing to ${analysis.targetAudience.toLowerCase()}, designed to drive ${analysis.goal.toLowerCase()}.
+ESPECIFICAÇÕES TÉCNICAS:
+- High resolution, commercial photography quality
+- Balanced lighting with professional shadows
+- Sharp focus on product/service elements
+- Optimized for ${analysis.goal.toLowerCase()} campaigns
 
-Style: photorealistic, commercial photography, marketing campaign quality`;
+Style: photorealistic, commercial marketing photography, designed to showcase ${product.category.toLowerCase()} targeting ${analysis.targetAudience.toLowerCase()}.`;
   };
 
   return (
@@ -162,12 +281,12 @@ Style: photorealistic, commercial photography, marketing campaign quality`;
         {isGenerating ? (
           <>
             <Loader2 className="h-5 w-5 mr-3 animate-spin" />
-            Analisando e gerando prompt...
+            Analisando produto e gerando prompt...
           </>
         ) : (
           <>
             <Wand2 className="h-5 w-5 mr-3" />
-            Gerar Prompt Otimizado
+            Analisar Produto e Gerar Prompt
           </>
         )}
       </Button>
