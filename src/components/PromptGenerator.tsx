@@ -1,7 +1,8 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Wand2, Loader2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Wand2, Loader2, Key } from 'lucide-react';
+import { Card } from '@/components/ui/card';
 
 interface PromptGeneratorProps {
   briefing: string;
@@ -18,25 +19,91 @@ const PromptGenerator: React.FC<PromptGeneratorProps> = ({
   isGenerating,
   setIsGenerating,
 }) => {
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem('openai_api_key') || '');
+  const [showApiKeyInput, setShowApiKeyInput] = useState(!apiKey);
+
+  const saveApiKey = () => {
+    localStorage.setItem('openai_api_key', apiKey);
+    setShowApiKeyInput(false);
+  };
+
   const generatePrompt = async () => {
-    if (!briefing.trim()) return;
+    if (!briefing.trim() || !apiKey) return;
     
     setIsGenerating(true);
     
     try {
-      // Simulate AI processing with realistic delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      const analysis = analyzeBriefing(briefing);
-      const prompt = createOptimizedPrompt(analysis);
-      
-      onAnalysisGenerated(analysis);
-      onPromptGenerated(prompt);
+      // Primeiro, fazemos a análise local do produto (mantemos essa funcionalidade)
+      const localAnalysis = analyzeBriefing(briefing);
+      onAnalysisGenerated(localAnalysis);
+
+      // Depois, usamos a OpenAI para gerar o prompt otimizado
+      const openAIPrompt = await generatePromptWithOpenAI(briefing, localAnalysis, apiKey);
+      onPromptGenerated(openAIPrompt);
     } catch (error) {
       console.error('Erro ao gerar prompt:', error);
+      // Fallback para geração local se a API falhar
+      const localPrompt = createOptimizedPrompt(analyzeBriefing(briefing));
+      onPromptGenerated(localPrompt);
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const generatePromptWithOpenAI = async (briefing: string, analysis: any, apiKey: string) => {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4.1-2025-04-14',
+        messages: [
+          {
+            role: 'system',
+            content: `Você é um especialista em marketing visual e prompts para IA generativa de imagens. Sua função é analisar briefings de produtos e criar prompts estratégicos em português brasileiro para gerar imagens de marketing de alta qualidade.
+
+PRODUTO IDENTIFICADO:
+- Categoria: ${analysis.product.category}
+- Subcategoria: ${analysis.product.subcategory || 'N/A'}
+- Nome: ${analysis.product.name || 'N/A'}
+- Características: ${analysis.product.features.join(', ') || 'N/A'}
+- Benefícios: ${analysis.product.benefits.join(', ') || 'N/A'}
+- Descrição: ${analysis.product.description}
+
+ANÁLISE DO PÚBLICO:
+- Público-alvo: ${analysis.targetAudience}
+- Gatilhos emocionais: ${analysis.emotions.join(', ')}
+- Objetivo da campanha: ${analysis.goal}
+
+Crie um prompt detalhado em português brasileiro que inclua:
+1. Descrição clara do produto e seu contexto de uso
+2. Direção visual específica baseada na categoria do produto
+3. Elementos emocionais que conectem com o público-alvo
+4. Especificações técnicas para qualidade profissional
+5. Orientações de composição e estilo
+
+O prompt deve ser otimizado para ferramentas como Midjourney, DALL-E, ou Stable Diffusion.`
+          },
+          {
+            role: 'user',
+            content: `Briefing do produto: ${briefing}
+
+Por favor, gere um prompt completo em português brasileiro para criar uma imagem de marketing impactante para este produto.`
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 1500,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Erro da API OpenAI: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.choices[0].message.content;
   };
 
   const analyzeBriefing = (text: string) => {
@@ -198,81 +265,48 @@ const PromptGenerator: React.FC<PromptGeneratorProps> = ({
   };
 
   const createOptimizedPrompt = (analysis: any) => {
-    const { product } = analysis;
+    // Fallback local caso a API falhe - versão simplificada em português
+    return `Crie uma imagem de marketing profissional para ${analysis.product.description}.
     
-    // Criar prompt focado no produto identificado
-    let productFocus = "";
-    if (product.name) {
-      productFocus = `featuring ${product.name}, `;
-    }
-    
-    const productDescription = product.description || `${product.category.toLowerCase()} solution`;
-    const productBenefits = product.benefits.length > 0 ? product.benefits.join(", ").toLowerCase() : "enhanced user experience";
-    
-    // Estilo visual baseado na categoria do produto
-    const styleMap = {
-      "Aplicativo/Software": "modern, clean UI/UX aesthetic, tech-forward design",
-      "Educacional": "professional, trustworthy, inspiring and accessible",
-      "Alimentício": "fresh, appetizing, natural and vibrant",
-      "Beleza/Cosmético": "elegant, sophisticated, aspirational beauty",
-      "Moda/Vestuário": "stylish, trendy, fashion-forward",
-      "Serviço": "professional, reliable, premium service quality"
-    };
+PRODUTO: ${analysis.product.category}
+PÚBLICO-ALVO: ${analysis.targetAudience}
+OBJETIVO: ${analysis.goal}
+EMOÇÕES: ${analysis.emotions.join(', ')}
 
-    const emotionMap = {
-      "Tranquilidade": "calm, peaceful, serene atmosphere",
-      "Energia": "dynamic, vibrant, energetic mood",
-      "Confiança": "professional, reliable, trustworthy feel",
-      "Felicidade": "joyful, bright, positive energy",
-      "Praticidade": "simple, efficient, user-friendly approach",
-      "Exclusividade": "premium, luxury, sophisticated elegance"
-    };
-
-    const audienceMap = {
-      "Jovens profissionais (25-35 anos)": "young professionals in modern work environment",
-      "Profissionais": "business professionals, corporate setting",
-      "Famílias": "family-oriented, warm and inclusive atmosphere",
-      "Terceira idade": "mature audience, respectful and accessible"
-    };
-
-    const style = styleMap[product.category] || "clean, professional design";
-    const emotion = analysis.emotions.map(e => emotionMap[e]).join(", ") || "positive, engaging atmosphere";
-    const audience = audienceMap[analysis.targetAudience] || "diverse target audience";
-
-    return `Create a high-quality marketing image ${productFocus}showcasing ${productDescription}.
-
-PRODUTO PRINCIPAL: ${product.category}${product.subcategory ? ` - ${product.subcategory}` : ''}
-${product.features.length > 0 ? `CARACTERÍSTICAS: ${product.features.join(", ")}` : ''}
-BENEFÍCIOS: ${productBenefits}
-
-TARGET AUDIENCE: ${audience}
-OBJETIVO DA CAMPANHA: ${analysis.goal}
-
-DIREÇÃO VISUAL:
-- ${style}
-- ${emotion}
-- Highlight the product's core value proposition: ${productBenefits}
-- Showcase ${product.category.toLowerCase()} in action or context of use
-- Professional photography/illustration style that conveys ${analysis.emotions.join(" and ").toLowerCase()}
-
-COMPOSIÇÃO:
-- Clean, modern layout with strong focus on the product
-- Use colors and lighting that reinforce ${analysis.emotions.join(", ").toLowerCase()}
-- Include visual elements that communicate ${product.benefits.join(" and ").toLowerCase()}
-- Ensure the image works across digital marketing platforms
-- Leave strategic space for product name and key messaging
-
-ESPECIFICAÇÕES TÉCNICAS:
-- High resolution, commercial photography quality
-- Balanced lighting with professional shadows
-- Sharp focus on product/service elements
-- Optimized for ${analysis.goal.toLowerCase()} campaigns
-
-Style: photorealistic, commercial marketing photography, designed to showcase ${product.category.toLowerCase()} targeting ${analysis.targetAudience.toLowerCase()}.`;
+Estilo visual moderno e profissional, cores vibrantes, composição equilibrada, alta qualidade, fotografia comercial.`;
   };
 
+  if (showApiKeyInput) {
+    return (
+      <Card className="mt-6 p-6 bg-yellow-50 border-yellow-200">
+        <div className="flex items-center gap-3 mb-4">
+          <Key className="h-5 w-5 text-yellow-600" />
+          <h3 className="font-medium text-yellow-800">Configuração da OpenAI</h3>
+        </div>
+        <p className="text-sm text-yellow-700 mb-4">
+          Para gerar prompts otimizados, digite sua chave da API da OpenAI:
+        </p>
+        <div className="flex gap-2">
+          <Input
+            type="password"
+            placeholder="sk-..."
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+            className="flex-1"
+          />
+          <Button onClick={saveApiKey} disabled={!apiKey.trim()}>
+            Salvar
+          </Button>
+        </div>
+        <p className="text-xs text-yellow-600 mt-2">
+          Sua chave será salva localmente no navegador e nunca compartilhada.
+        </p>
+      </Card>
+    );
+  }
+
   return (
-    <div className="mt-6">
+    <div className="mt-6 space-y-4">
       <Button
         onClick={generatePrompt}
         disabled={!briefing.trim() || isGenerating}
@@ -281,14 +315,24 @@ Style: photorealistic, commercial marketing photography, designed to showcase ${
         {isGenerating ? (
           <>
             <Loader2 className="h-5 w-5 mr-3 animate-spin" />
-            Analisando produto e gerando prompt...
+            Analisando produto e gerando prompt com IA...
           </>
         ) : (
           <>
             <Wand2 className="h-5 w-5 mr-3" />
-            Analisar Produto e Gerar Prompt
+            Analisar Produto e Gerar Prompt com IA
           </>
         )}
+      </Button>
+      
+      <Button
+        onClick={() => setShowApiKeyInput(true)}
+        variant="outline"
+        size="sm"
+        className="w-full text-xs"
+      >
+        <Key className="h-3 w-3 mr-2" />
+        Alterar Chave da API
       </Button>
     </div>
   );
