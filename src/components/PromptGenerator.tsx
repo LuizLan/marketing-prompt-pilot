@@ -58,7 +58,7 @@ const PromptGenerator: React.FC<PromptGeneratorProps> = ({
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4.1',
+        model: 'gpt-4',
         messages: [
           {
             role: 'system',
@@ -115,8 +115,8 @@ ${briefing}
 Por favor, gere um prompt completo, detalhado e versátil que inclua todos os elementos visuais, técnicos e emocionais necessários para criar uma imagem de marketing impactante.`
           }
         ],
-        temperature: 0.9,
-        max_tokens: 2500,
+        temperature: 0.7,
+        max_tokens: 1500,
       }),
     });
 
