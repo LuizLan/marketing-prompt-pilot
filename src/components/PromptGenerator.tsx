@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -93,8 +94,8 @@ O prompt deve ser otimizado para ferramentas como Midjourney, DALL-E, ou Stable 
 Por favor, gere um prompt completo em português brasileiro para criar uma imagem de marketing impactante para este produto.`
           }
         ],
-        temperature: 0.7,
-        max_tokens: 1500,
+        temperature: 0.9,
+        max_tokens: 2500,
       }),
     });
 
