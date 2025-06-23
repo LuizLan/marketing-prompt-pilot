@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,12 +33,12 @@ const PromptGenerator: React.FC<PromptGeneratorProps> = ({
     setIsGenerating(true);
     
     try {
-      // Primeiro, fazemos a análise local do produto (mantemos essa funcionalidade)
+      // Primeiro, fazemos a análise local do produto (mantemos essa funcionalidade para a interface)
       const localAnalysis = analyzeBriefing(briefing);
       onAnalysisGenerated(localAnalysis);
 
-      // Depois, usamos a OpenAI para gerar o prompt otimizado
-      const openAIPrompt = await generatePromptWithOpenAI(briefing, localAnalysis, apiKey);
+      // Depois, usamos a OpenAI para gerar o prompt otimizado (apenas com o briefing)
+      const openAIPrompt = await generatePromptWithOpenAI(briefing, apiKey);
       onPromptGenerated(openAIPrompt);
     } catch (error) {
       console.error('Erro ao gerar prompt:', error);
@@ -51,7 +50,7 @@ const PromptGenerator: React.FC<PromptGeneratorProps> = ({
     }
   };
 
-  const generatePromptWithOpenAI = async (briefing: string, analysis: any, apiKey: string) => {
+  const generatePromptWithOpenAI = async (briefing: string, apiKey: string) => {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -63,35 +62,57 @@ const PromptGenerator: React.FC<PromptGeneratorProps> = ({
         messages: [
           {
             role: 'system',
-            content: `Você é um especialista em marketing visual e prompts para IA generativa de imagens. Sua função é analisar briefings de produtos e criar prompts estratégicos em português brasileiro para gerar imagens de marketing de alta qualidade.
+            content: `Você é um especialista em marketing visual e prompts para IA generativa de imagens. Sua função é analisar briefings de produtos/serviços e criar prompts estratégicos MUITO DETALHADOS em português brasileiro para gerar imagens de marketing de alta qualidade.
 
-PRODUTO IDENTIFICADO:
-- Categoria: ${analysis.product.category}
-- Subcategoria: ${analysis.product.subcategory || 'N/A'}
-- Nome: ${analysis.product.name || 'N/A'}
-- Características: ${analysis.product.features.join(', ') || 'N/A'}
-- Benefícios: ${analysis.product.benefits.join(', ') || 'N/A'}
-- Descrição: ${analysis.product.description}
+DIRETRIZES PARA CRIAÇÃO DO PROMPT:
 
-ANÁLISE DO PÚBLICO:
-- Público-alvo: ${analysis.targetAudience}
-- Gatilhos emocionais: ${analysis.emotions.join(', ')}
-- Objetivo da campanha: ${analysis.goal}
+1. ANÁLISE DO PRODUTO/SERVIÇO:
+   - Identifique claramente o que está sendo promovido
+   - Determine a categoria, características principais e benefícios
+   - Compreenda o contexto de uso e aplicação
 
-Crie um prompt detalhado em português brasileiro que inclua:
-1. Descrição clara do produto e seu contexto de uso
-2. Direção visual específica baseada na categoria do produto
-3. Elementos emocionais que conectem com o público-alvo
-4. Especificações técnicas para qualidade profissional
-5. Orientações de composição e estilo
+2. IDENTIFICAÇÃO DO PÚBLICO-ALVO:
+   - Analise quem é o público baseado no briefing
+   - Identifique faixa etária, estilo de vida e preferências
+   - Determine gatilhos emocionais relevantes
 
-O prompt deve ser otimizado para ferramentas como Midjourney, DALL-E, ou Stable Diffusion.`
+3. ELEMENTOS VISUAIS ESTRATÉGICOS:
+   - Defina paleta de cores baseada na psicologia das cores para o público
+   - Estabeleça estilo fotográfico (lifestyle, produto isolado, conceitual, etc.)
+   - Determine enquadramento, ângulos e composição
+   - Inclua elementos de ambiente e contexto relevantes
+
+4. ESPECIFICAÇÕES TÉCNICAS DETALHADAS:
+   - Qualidade profissional (8K, ultra-realistic, professional photography)
+   - Iluminação específica (natural, studio, golden hour, etc.)
+   - Características da câmera/lente quando relevante
+   - Pós-processamento e estilo de edição
+
+5. ELEMENTOS EMOCIONAIS E STORYTELLING:
+   - Integre emoções que conectem com o público
+   - Crie narrativa visual que comunique os benefícios
+   - Inclua elementos que transmitam credibilidade e aspiração
+
+6. OTIMIZAÇÃO PARA FERRAMENTAS DE IA:
+   - Use termos específicos para Midjourney, DALL-E, Stable Diffusion
+   - Inclua pesos e parâmetros quando necessário
+   - Estruture o prompt de forma hierárquica (principal → detalhes → técnico)
+
+7. VERSATILIDADE:
+   - Crie variações para diferentes formatos (quadrado, retrato, paisagem)
+   - Sugira adaptações para diferentes plataformas de marketing
+   - Inclua opções de variação de cores e elementos
+
+O prompt final deve ser EXTENSO, DETALHADO e incluir todos os elementos necessários para gerar uma imagem de marketing profissional e impactante. Deve ter pelo menos 200-300 palavras e ser estruturado de forma clara.`
           },
           {
             role: 'user',
-            content: `Briefing do produto: ${briefing}
+            content: `Analise este briefing e crie um prompt MUITO DETALHADO em português brasileiro para gerar uma imagem de marketing profissional:
 
-Por favor, gere um prompt completo em português brasileiro para criar uma imagem de marketing impactante para este produto.`
+BRIEFING:
+${briefing}
+
+Por favor, gere um prompt completo, detalhado e versátil que inclua todos os elementos visuais, técnicos e emocionais necessários para criar uma imagem de marketing impactante.`
           }
         ],
         temperature: 0.9,
@@ -160,7 +181,7 @@ Por favor, gere um prompt completo em português brasileiro para criar uma image
       category = "Beleza/Cosmético";
       if (lowerText.includes("natural")) subcategory = "Natural";
       if (lowerText.includes("anti-idade")) subcategory = "Anti-idade";
-    } else if (lowerText.includes("roupa") || lowerText.includes("vestuário") || lowerText.includes("moda")) {
+    } else if (lowerText.includes("roupa") || lowerText.includes("vestuário") || lowerText.includes("moda") || lowerText.includes("tênis")) {
       category = "Moda/Vestuário";
     } else if (lowerText.includes("serviço") || lowerText.includes("consultoria")) {
       category = "Serviço";
